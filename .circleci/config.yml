@@ -22,9 +22,22 @@ jobs:
           paths:
             - ~/.m2
           key: cwa-server-{{ checksum "~/pom-checksum" }}
+      - setup_remote_docker:
+          docker_layer_caching: true
+#      - run:
+#          name: Start Object Store Container
+#          command: docker-compose up -d objectstore
       - run:
-          name: Test and Package
-          command: mvn failsafe:integration-test --batch-mode package
+          name: Run all tests on Docker
+          command: |
+            docker create -v /app --name volume alpine:3.4 /bin/true
+            docker cp . volume:/app
+            docker-compose up -d objectstore
+            docker-compose up -d create-bucket
+            docker run --volumes-from volume maven:3.6.3-jdk-11 mvn -f app/pom.xml failsafe:integration-test --batch-mode package
+#      - run:
+#          name: Test and Package
+#          command: mvn failsafe:integration-test --batch-mode package
       - run:
           name: Save test results
           command: |
